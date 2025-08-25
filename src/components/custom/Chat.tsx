@@ -5,7 +5,7 @@ import { useState, useRef, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, Bot, User } from "lucide-react";
+import { Send, Bot, User, Loader2 } from "lucide-react";
 import axios from "axios";
 import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
@@ -52,8 +52,6 @@ const MyChat = () => {
 
     setIsLoading(true);
     try {
-      setMessages((prev) => [...prev, newMessage]);
-
       const collectionName = localStorage.getItem("myCollection");
 
       const res = await axios.post("/api/chat", {
@@ -67,11 +65,12 @@ const MyChat = () => {
         sender: "bot",
         timestamp: new Date(),
       };
+      setMessages((prev) => [...prev, newMessage]);
       setMessages((prev) => [...prev, newMessageRes]);
       setInputValue("");
     } catch (error) {
       console.log(error);
-    }finally{
+    } finally {
       setIsLoading(false);
     }
   };
@@ -224,7 +223,9 @@ const MyChat = () => {
             className="flex-1"
           />
           <Button onClick={handleSendMessage} disabled={!inputValue.trim()}>
-            <Send className="w-4 h-4" />
+            {
+              isLoading ? (<Loader2 className="animate-spin w-4 h-4"/>) : (<Send className="w-4 h-4" />)
+            }
           </Button>
         </div>
       </div>

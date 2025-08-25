@@ -6,8 +6,10 @@ import { PDFLoader } from "@langchain/community/document_loaders/fs/pdf";
 import { GoogleGenerativeAIEmbeddings } from "@langchain/google-genai";
 import { TaskType } from "@google/generative-ai";
 import { QdrantVectorStore } from "@langchain/qdrant";
+import { revalidatePath } from "next/cache";
 
 export async function POST(request: NextRequest) {
+  revalidatePath("/");
   try {
     const formData = await request.formData();
     const file = formData.get("file") as File;
@@ -29,20 +31,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const uploadsDir = path.join(process.cwd(), "public", "uploads");
-    if (!fs.existsSync(uploadsDir)) {
-      fs.mkdirSync(uploadsDir, { recursive: true });
-    }
+    // const uploadsDir = path.join(process.cwd(), "public", "uploads");
+    // if (!fs.existsSync(uploadsDir)) {
+    //   fs.mkdirSync(uploadsDir, { recursive: true });
+    // }
 
     const fileName = `${Date.now()}-${file.name}`;
-    const filePath = path.join(uploadsDir, fileName);
+    const filePath = path.join("/tmp", fileName);
 
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    fs.writeFileSync(filePath, buffer);
+    // fs.writeFileSync(filePath, buffer);
 
-    const loader = new PDFLoader(filePath);
+    const loader = new PDFLoader(new Blob([buffer], { type: file.type } ));
     const docs = await loader.load();
 
     const embeddings = new GoogleGenerativeAIEmbeddings({
@@ -58,9 +60,9 @@ export async function POST(request: NextRequest) {
         collectionName: myCollectionName
     })
 
-    console.log("Indexing complete. Vector store ready to use.", vectorStore);
+    // console.log("Indexing complete. Vector store ready to use.", vectorStore);
 
-    fs.unlinkSync(filePath);
+    // fs.unlinkSync(filePath);
 
     return NextResponse.json(
       { 
