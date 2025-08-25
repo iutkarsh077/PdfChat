@@ -1,4 +1,5 @@
 "use server";
+
 import { NextRequest, NextResponse } from "next/server";
 import path from "path";
 import fs from "fs";
@@ -10,20 +11,17 @@ import { revalidatePath } from "next/cache";
 
 export async function POST(request: NextRequest) {
   revalidatePath("/");
+
   try {
     const formData = await request.formData();
     const file = formData.get("file") as File;
 
     if (!file) {
-      return NextResponse.json(
-        { error: "No file uploaded" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
     }
 
-    const allowedTypes = ['.pdf'];
+    const allowedTypes = [".pdf"];
     const fileExtension = path.extname(file.name).toLowerCase();
-    
     if (!allowedTypes.includes(fileExtension)) {
       return NextResponse.json(
         { error: "Invalid file type. Only PDF files are allowed." },
@@ -31,58 +29,43 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // const uploadsDir = path.join(process.cwd(), "public", "uploads");
-    // if (!fs.existsSync(uploadsDir)) {
-    //   fs.mkdirSync(uploadsDir, { recursive: true });
-    // }
-
     const fileName = `${Date.now()}-${file.name}`;
     const filePath = path.join("/tmp", fileName);
-
     const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
+    fs.writeFileSync(filePath, Buffer.from(bytes));
 
-    // fs.writeFileSync(filePath, buffer);
-
-    const loader = new PDFLoader(new Blob([buffer], { type: file.type } ));
+    const loader = new PDFLoader(filePath);
     const docs = await loader.load();
 
     const embeddings = new GoogleGenerativeAIEmbeddings({
-        model: "text-embedding-004",
-        taskType: TaskType.RETRIEVAL_DOCUMENT
+      model: "text-embedding-004",
+      taskType: TaskType.RETRIEVAL_DOCUMENT,
     });
 
-    const myCollectionName = crypto.randomUUID();
+    const collectionName = crypto.randomUUID();
 
     const vectorStore = await QdrantVectorStore.fromDocuments(docs, embeddings, {
-        url: process.env.QDRANTDB_URL,
-        apiKey: process.env.QDRANTDB_API_KEY,
-        collectionName: myCollectionName
-    })
+      url: process.env.QDRANTDB_URL!,
+      apiKey: process.env.QDRANTDB_API_KEY!,
+      collectionName: collectionName,
+    });
 
-    // console.log("Indexing complete. Vector store ready to use.", vectorStore);
-
-    // fs.unlinkSync(filePath);
+    fs.unlinkSync(filePath);
 
     return NextResponse.json(
-      { 
-        success: true, 
-        fileName: fileName,
-        filePath: `/uploads/${fileName}`,
-        collectionName: myCollectionName,
+      {
+        success: true,
+        fileName,
+        collectionName,
         fileSize: file.size,
-        fileType: file.type
+        fileType: file.type,
       },
       { status: 200 }
     );
-
   } catch (error) {
     console.error("File upload error:", error);
     return NextResponse.json(
-      { 
-        message: "Internal Server Error", 
-        status: false 
-      },
+      { message: "Internal Server Error", status: false },
       { status: 500 }
     );
   }
