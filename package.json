@@ -21,7 +21,7 @@
     "clsx": "^2.1.1",
     "lucide-react": "^0.540.0",
     "multer": "^2.0.2",
-    "next": "15.4.7",
+    "next": "15.4.10",
     "next-cloudinary": "^6.16.0",
     "openai": "^4.62.1",
     "pdf-parse": "^1.1.1",
